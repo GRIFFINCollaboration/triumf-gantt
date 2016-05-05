@@ -1,0 +1,94 @@
+<html>
+    <head>
+        <title>TRIUMF Gantt Chart</title>
+        <script type="text/javascript" src="scripts/papaparse.min.js"></script>
+        <script src="scripts/jquery1-11-3.min.js" type="text/javascript"></script>
+
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+        <script src="scripts/bootstrap3-3-5.min.js" type="text/javascript"></script>
+        <link rel="stylesheet" href="css/gantt.css">
+    </head>
+    <body>
+
+        <input type='file' accept='.csv' onchange='processGantt(this.files)'></input>
+
+        <table id='gantt' class='table text-center'></table>
+
+        <script>
+            function processGantt(files){
+                Papa.parse(files[0], {
+                    complete: function(results) {
+                        // munge and report data once it has arrived
+
+                        var nRows = Math.max.apply(null,results.data.map(function(o){return o.length;})),
+                            i,j, row,cell,span,next;
+
+                        // insert all table rows
+                        setupTable('gantt', nRows);
+
+                        // break date into year / month / day
+                        results.data[0] = ['Year', 'Month', 'Day', 'Shift'].concat(results.data[0].slice(2));
+                        results.data[1] = [null, null, null, null].concat(results.data[1].slice(2));
+                        for(i=2; i<results.data.length; i++){
+                            results.data[i] = parseDate(results.data[i][0]).concat(results.data[i].slice(1));
+                        }
+
+                        // add all cells with appropriate spans
+                        for(i=0; i<results.data.length; i++){            
+                            for(j=0; j<results.data[i].length; j++){
+                                // don't add a cell if it's been delt with in a previous span
+                                if(i>0 && results.data[i][j] == results.data[i-1][j])
+                                    continue;
+
+                                // look ahead to see if this cell should span multiple columns
+                                span=1;
+                                while(i+span<results.data.length && results.data[i][j] == results.data[i+span][j]){
+                                    span++;
+                                }
+
+                                row = document.getElementById('row'+j);
+                                cell = document.createElement('td');
+                                cell.innerHTML = results.data[i][j];
+                                cell.setAttribute('colspan', span);
+                                row.appendChild(cell);
+                            }
+                        }
+                    }
+                });
+            }
+
+            function setupTable(tableID, nRows){
+
+                var i, row,
+                    table = document.getElementById(tableID);
+
+                // extra two rows since date->year+month+day
+                for(i=0; i<nRows+2; i++){
+                    row = document.createElement('tr');
+                    row.setAttribute('id', 'row'+i);
+                    table.appendChild(row);
+                }
+            }
+
+            function parseDate(date){
+                // take a 1999-12-31 style date, and split it into [1999, 'December', 'Tues-31']
+                // returns ['', '', ''] if data is null
+
+                var parsed, d,
+                    months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+                    days = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
+
+                if(!date){
+                    return ['', '', ''];
+                }
+
+                parsed = date.split('-');
+                d = new Date( parseInt(parsed[0],10), parseInt(parsed[1],10)-1, parseInt(parsed[2],10) );
+                parsed[1] = months[parseInt(parsed[1], 10)-1];
+                parsed[2] = days[d.getDay()] + '-' + parsed[2];
+
+                return parsed;
+            }
+        </script>
+    </body>
+</html>
