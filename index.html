@@ -9,47 +9,113 @@
         <link rel="stylesheet" href="css/gantt.css">
     </head>
     <body>
+        <div class='wrap'>
+            <!--header-->
+            <div class='branding header'>
+                <h1>TRIUMF Gantt Chart</h1>
+            </div>
 
-        <input type='file' accept='.csv' onchange='processGantt(this.files)'></input>
+            <div class='col-md-3'>
+                <label for='filein'>Upload a CSV schedule to load:</label>
+                <input id='filein' type='file' accept='.csv' onchange='processGantt(this.files)'></input>
+            </div>
+            <!--div class='col-md-9'>
+                <label>Or select a date range to fetch a schedule for:</label>
+                <div>
+                    <input id='date-start' type=text placeholder='yyyy-mm-dd' pattern='[0-9]{4,4}-[0-9]{2,2}-[0-9]{2,2}'></input>
+                    <label>to</label>
+                    <input id='date-end' type=text placeholder='yyyy-mm-dd' pattern='[0-9]{4,4}-[0-9]{2,2}-[0-9]{2,2}'></input>
+                    <a class='btn btn-info' onclick='redirectDaterange()'>Find Schedule</a>
+                </div>
+            </div-->
 
-        <table id='gantt' class='table text-center'></table>
+            <table id='gantt' class='table text-center'></table>
+        </div>
+
+        <div id='footer' class='branding footer'>
+            <h3>Built at TRIUMF</h3>
+            <div class='col-md-4'>
+                <div>&copy; 2016 GRIFFIN Collaboration</div>
+                <a href='https://github.com/GRIFFINCollaboration/AngularCorrelationUtility'>Source Code on GitHub</a>
+            </div>
+        </div>
 
         <script>
+
+            // var start = getParameterByName('start'),
+            //     end   = getParameterByName('end'),
+            //     url = `https://mis.triumf.ca/schedule/schedule.csv?detail=true&dateview=range&from=${start}&to=${end}&weeks_later=100&in=isac_wing&detail=true`;
+
+            // // load url parameters into ui
+            // document.getElementById('date-start').value = start;
+            // document.getElementById('date-end').value = end;
+
+            // // fetch calendar described by query string if valid
+            // if(document.getElementById('date-start').validity.valid && document.getElementById('date-end').validity.valid){
+
+            // }
+
+
+
+
             function processGantt(files){
+                document.getElementById('gantt').innerHTML = '';
+
                 Papa.parse(files[0], {
+                    skipEmptyLines: true,
                     complete: function(results) {
                         // munge and report data once it has arrived
 
                         var nRows = Math.max.apply(null,results.data.map(function(o){return o.length;})),
-                            i,j, row,cell,span,next;
+                            i,j, row,cell,span,next, experiment;
 
                         // insert all table rows
                         setupTable('gantt', nRows);
 
-                        // break date into year / month / day
-                        results.data[0] = ['Year', 'Month', 'Day', 'Shift'].concat(results.data[0].slice(2));
-                        results.data[1] = [null, null, null, null].concat(results.data[1].slice(2));
-                        for(i=2; i<results.data.length; i++){
-                            results.data[i] = parseDate(results.data[i][0]).concat(results.data[i].slice(1));
-                        }
+                        // scrub raw data
+                        results.data = noJagged(results.data, nRows); // in case any days are missing entries, add dummies on the bottom
+                        results.data = massageDate(results.data); // break out date
 
                         // add all cells with appropriate spans
-                        for(i=0; i<results.data.length; i++){            
+                        for(i=0; i<results.data.length; i++){        
                             for(j=0; j<results.data[i].length; j++){
-                                // don't add a cell if it's been delt with in a previous span
-                                if(i>0 && results.data[i][j] == results.data[i-1][j])
-                                    continue;
 
-                                // look ahead to see if this cell should span multiple columns
-                                span=1;
-                                while(i+span<results.data.length && results.data[i][j] == results.data[i+span][j]){
-                                    span++;
+                                span = 1;
+                                if(results.data[i][j]){
+                                    // don't add a cell if it's been delt with in a previous span
+                                    if(i>0 && results.data[i][j] == results.data[i-1][j])
+                                        continue;
+
+                                    // look ahead to see if this cell should span multiple columns        
+                                    while(i+span<results.data.length && results.data[i][j] == results.data[i+span][j]){
+                                        span++;
+                                    }
                                 }
 
+                                // set up cell
                                 row = document.getElementById('row'+j);
                                 cell = document.createElement('td');
                                 cell.innerHTML = results.data[i][j];
                                 cell.setAttribute('colspan', span);
+
+                                // figure out cell class
+                                // weekends
+                                if(results.data[i][2] && span<=2 && (results.data[i][2].slice(0,3) === 'Sat' || results.data[i][2].slice(0,3) === 'Sun')){
+                                    cell.classList.add('weekend');
+                                }
+                                // experiment indices associated with facilities or yield
+                                if(results.data[i][j] && results.data[i][j+1] && results.data[i][j].search(RegExp('^[A-Za-z][0-9]+', 'gm'))===0){
+                                    experiment = results.data[i][j+1].split(' ')[0].toLowerCase();
+
+                                    if(dataStore.experiments.indexOf(experiment) != -1){
+                                        cell.classList.add('experiment-index');
+                                    } else if(experiment === 'yield'){
+                                        cell.classList.add('yield');
+                                    }
+                                }
+                                // all classes that can be determined from the cell in question alone
+                                cell = chooseClass(cell);
+                                
                                 row.appendChild(cell);
                             }
                         }
@@ -57,7 +123,10 @@
                 });
             }
 
+            // table munging
+
             function setupTable(tableID, nRows){
+                // fill tableID <table> element with nRows <tr> elements, id'ed as row[i]
 
                 var i, row,
                     table = document.getElementById(tableID);
@@ -70,13 +139,76 @@
                 }
             }
 
+            function chooseClass(cell){
+                // given a td element, decide what css class should be applied.
+
+                var className;
+
+                if(dataStore.months.indexOf(cell.innerHTML) !== -1){
+                    className = cell.innerHTML.toLowerCase();
+                } else if(cell.innerHTML.trim() === 'AM' || cell.innerHTML.trim() === 'PM'){
+                    className = cell.innerHTML.toLowerCase();
+                } else if(cell.innerHTML.toLowerCase().trim() === 'maint' || cell.innerHTML.toLowerCase().trim() === 'maintenance'){
+                    className = 'maint';
+                } else if(cell.innerHTML.toLowerCase().trim() === 'setup'){
+                    className = 'setup';
+                } else if(cell.innerHTML.toLowerCase().trim() === 'startup' || cell.innerHTML.toLowerCase().trim() === 'start-up'){
+                    className = 'startup';
+                } else if(cell.innerHTML.toLowerCase().trim() === 'yield'){
+                    className = 'yield';
+                } else if(cell.innerHTML.toLowerCase().trim() === 'beam development'){
+                    className = 'beam-dev';
+                } else if(cell.innerHTML.indexOf('TIGRESS')!=-1){
+                    className = 'tigress';
+                } else if(cell.innerHTML.indexOf('DSL')!=-1){
+                    className = 'dsl';
+                } else if(cell.innerHTML.indexOf('GRIFFIN')!=-1){
+                    className = 'griffin';
+                } else if(cell.innerHTML.indexOf('IRIS')!=-1){
+                    className = 'iris';
+                } 
+
+                cell.classList.add(className);
+                return cell;
+            }
+
+            // data munging
+
+            function noJagged(data, length){
+                //insist each row in data be at least length entries long
+
+                var i, j, padding;
+
+                for(i=0; i<data.length; i++){
+                    if(data[i].length < length){
+                        padding = [];
+                        for(j=0; j<length-data[i].length; j++)
+                            padding.push(null);
+                        data[i] = data[i].concat(padding);
+                    }
+                }
+
+                return data
+            }
+
+            function massageDate(data){
+                // take the parsed csv and rearrange the date information to have separate entries for year, month and day. 
+
+                // break date into year / month / day
+                data[0] = ['Year', 'Month', 'Day', 'Shift'].concat(data[0].slice(2));
+                data[1] = [null, null, null, null].concat(data[1].slice(2));
+                for(i=2; i<data.length; i++){
+                    data[i] = parseDate(data[i][0]).concat(data[i].slice(1));
+                }
+
+                return data;
+            }
+
             function parseDate(date){
                 // take a 1999-12-31 style date, and split it into [1999, 'December', 'Tues-31']
                 // returns ['', '', ''] if data is null
 
-                var parsed, d,
-                    months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-                    days = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
+                var parsed, d;
 
                 if(!date){
                     return ['', '', ''];
@@ -84,10 +216,39 @@
 
                 parsed = date.split('-');
                 d = new Date( parseInt(parsed[0],10), parseInt(parsed[1],10)-1, parseInt(parsed[2],10) );
-                parsed[1] = months[parseInt(parsed[1], 10)-1];
-                parsed[2] = days[d.getDay()] + '-' + parsed[2];
+                parsed[1] = dataStore.months[parseInt(parsed[1], 10)-1];
+                parsed[2] = dataStore.days[d.getDay()] + '-' + parsed[2];
 
                 return parsed;
+            }
+
+            // // redirects & data fetching
+            // function redirectDaterange(){
+            //     // redirect to the query string with the specified dates
+
+            //     if(!document.getElementById('date-start').validity.valid || !document.getElementById('date-end').validity.valid)
+            //         return;
+
+            //     var start = document.getElementById('date-start').value,
+            //         end   = document.getElementById('date-end').value;
+
+            //     window.location = `?start=${start}&end=${end}`;
+
+            // }
+
+            // function getParameterByName(name) {
+            //     // get a parameter out of the query string
+            //     // thanks http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript/901144#901144
+            //     name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+            //     var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+            //         results = regex.exec(location.search);
+            //     return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+            // }
+
+            dataStore = {
+                'months': ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+                'days': ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'],
+                'experiments': ['tigress', 'griffin', 'iris', 'dsl']
             }
         </script>
     </body>
