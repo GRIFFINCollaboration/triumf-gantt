@@ -1,6 +1,23 @@
+html{
+    height: 100%;
+}
+
+body{
+    min-width:100%;
+    min-height: 100%;
+    display: inline-flex;
+    flex-direction: column;
+}
+
 td{
     padding: 0.5em !important;
-    border: 1px solid #DDDDDD;
+    border: 1px solid #D0D0D0;
+}
+
+/* time */
+
+td.weekend{
+    background-color: #EDEDED;
 }
 
 td.january{
@@ -51,12 +68,85 @@ td.december{
     background-color: #D7FAA3;
 }
 
+td.am{
+    background-color: #71ACF8;
+}
 
+td.pm{
+    background-color: #3D5277;
+    color: #FFFFFF;
+}
 
+/* status */
 
+td.maint{
+    background-color: #FF0000;
+    color: #FFFFFF;
+}
 
+td.setup{
+    background-color: #BDE380;
+}
 
+td.startup{
+    background-color: #FDA095;
+    color: #9D4035;
+}
 
+td.yield{
+    background-color: #8CEDAB;
+}
 
+td.beam-dev{
+    background-color: #e9d460;
+}
 
+/* experiments */
 
+td.experiment-index{
+    background-color: #FFFF00;
+}
+
+td.tigress{
+    background-color: #0000FF;
+    color: #FFFFFF;
+}
+
+td.dsl{
+    background-color: #009900;
+    color: #FFFFFF;
+}
+
+td.griffin{
+    background-color: #96281B;
+    color: #FFFFFF;
+}
+
+td.iris{
+    background-color: #663399;
+    color: #FFFFFF;
+}
+
+/* Header & Footer */
+div.branding{
+    background-color: #367FA9;
+    color: #F9F9F9;
+    padding: 1em;
+    clear: both;
+}
+
+div.header{
+    margin-bottom: 1em;
+}
+
+div.footer{
+    margin-top: 1em;
+    min-height: 10em;
+
+    flex-shrink: 0;
+}
+
+div.wrap{
+    flex-grow: 1;
+    flex-shrink 0;
+}
