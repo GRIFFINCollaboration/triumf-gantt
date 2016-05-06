@@ -26,12 +26,7 @@
                         // insert all table rows
                         setupTable('gantt', nRows);
 
-                        // break date into year / month / day
-                        results.data[0] = ['Year', 'Month', 'Day', 'Shift'].concat(results.data[0].slice(2));
-                        results.data[1] = [null, null, null, null].concat(results.data[1].slice(2));
-                        for(i=2; i<results.data.length; i++){
-                            results.data[i] = parseDate(results.data[i][0]).concat(results.data[i].slice(1));
-                        }
+                        results.data = massageDate(results.data);
 
                         // add all cells with appropriate spans
                         for(i=0; i<results.data.length; i++){            
@@ -49,7 +44,12 @@
                                 row = document.getElementById('row'+j);
                                 cell = document.createElement('td');
                                 cell.innerHTML = results.data[i][j];
+                                cell = chooseClass(cell);
                                 cell.setAttribute('colspan', span);
+
+                                // choose a CSS class for the cell
+                                if(results.data[i][j])
+
                                 row.appendChild(cell);
                             }
                         }
@@ -57,7 +57,10 @@
                 });
             }
 
+            // table munging
+
             function setupTable(tableID, nRows){
+                // fill tableID <table> element with nRows <tr> elements, id'ed as row[i]
 
                 var i, row,
                     table = document.getElementById(tableID);
@@ -70,13 +73,36 @@
                 }
             }
 
+            function chooseClass(cell){
+                // given a td element, decide what css class should be applied.
+
+                if(dataStore.months.indexOf(cell.innerHTML) !== -1){
+                    cell.classList.add(cell.innerHTML.toLowerCase());
+                }
+
+                return cell;
+            }
+
+            // date munging
+
+            function massageDate(data){
+                // take the parsed csv and rearrange the date information to have separate entries for year, month and day. 
+
+                // break date into year / month / day
+                data[0] = ['Year', 'Month', 'Day', 'Shift'].concat(data[0].slice(2));
+                data[1] = [null, null, null, null].concat(data[1].slice(2));
+                for(i=2; i<data.length; i++){
+                    data[i] = parseDate(data[i][0]).concat(data[i].slice(1));
+                }
+
+                return data;
+            }
+
             function parseDate(date){
                 // take a 1999-12-31 style date, and split it into [1999, 'December', 'Tues-31']
                 // returns ['', '', ''] if data is null
 
-                var parsed, d,
-                    months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-                    days = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
+                var parsed, d;
 
                 if(!date){
                     return ['', '', ''];
@@ -84,10 +110,15 @@
 
                 parsed = date.split('-');
                 d = new Date( parseInt(parsed[0],10), parseInt(parsed[1],10)-1, parseInt(parsed[2],10) );
-                parsed[1] = months[parseInt(parsed[1], 10)-1];
-                parsed[2] = days[d.getDay()] + '-' + parsed[2];
+                parsed[1] = dataStore.months[parseInt(parsed[1], 10)-1];
+                parsed[2] = dataStore.days[d.getDay()] + '-' + parsed[2];
 
                 return parsed;
+            }
+
+            dataStore = {
+                'months': ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+                'days': ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat']
             }
         </script>
     </body>

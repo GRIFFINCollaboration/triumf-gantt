@@ -2,3 +2,61 @@ td{
     padding: 0.5em !important;
     border: 1px solid #DDDDDD;
 }
+
+td.january{
+    background-color: #FDDA40;
+}
+
+td.february{
+    background-color: #FFABF3;
+}
+
+td.march{
+    background-color: #5FE652;
+}
+
+td.april{
+    background-color: #68EDFA;
+}
+
+td.may{
+    background-color: #F2C36E;
+}
+
+td.june{
+    background-color: #24FBA8;
+}
+
+td.july{
+    background-color: #D0EEEF;
+}
+
+td.august{
+    background-color: #8BFF9A;
+}
+
+td.september{
+    background-color: #EEF4BA;
+}
+
+td.october{
+    background-color: #67FDDC;
+}
+
+td.november{
+    background-color: #BFCF89;
+}
+
+td.december{
+    background-color: #D7FAA3;
+}
+
+
+
+
+
+
+
+
+
+
