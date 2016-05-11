@@ -15,20 +15,6 @@
                 <h1>TRIUMF Gantt Chart</h1>
             </div>
 
-            <div class='col-md-3'>
-                <label for='filein'>Upload a CSV schedule to load:</label>
-                <input id='filein' type='file' accept='.csv' onchange='processGantt(this.files)'></input>
-            </div>
-            <!--div class='col-md-9'>
-                <label>Or select a date range to fetch a schedule for:</label>
-                <div>
-                    <input id='date-start' type=text placeholder='yyyy-mm-dd' pattern='[0-9]{4,4}-[0-9]{2,2}-[0-9]{2,2}'></input>
-                    <label>to</label>
-                    <input id='date-end' type=text placeholder='yyyy-mm-dd' pattern='[0-9]{4,4}-[0-9]{2,2}-[0-9]{2,2}'></input>
-                    <a class='btn btn-info' onclick='redirectDaterange()'>Find Schedule</a>
-                </div>
-            </div-->
-
             <table id='gantt' class='table text-center'></table>
         </div>
 
@@ -42,26 +28,18 @@
 
         <script>
 
-            // var start = getParameterByName('start'),
-            //     end   = getParameterByName('end'),
-            //     url = `https://mis.triumf.ca/schedule/schedule.csv?detail=true&dateview=range&from=${start}&to=${end}&weeks_later=100&in=isac_wing&detail=true`;
+            // this is *quite* the hack - better solution is to get mis to put proper cors headers on their post...
+            $.getJSON('http://alloworigin.com/get?url=' + encodeURIComponent('https://mis.triumf.ca/schedule/schedule.csv?detail=true&dateview=range&from=2016-05-04&to=2038-08-07&weeks_later=100&in=isac_wing&detail=true') + '&callback=?', 
+                function(data){
+                    //console.log(data.contents);
+                    processGantt(data.contents);
+                }
+            );
 
-            // // load url parameters into ui
-            // document.getElementById('date-start').value = start;
-            // document.getElementById('date-end').value = end;
-
-            // // fetch calendar described by query string if valid
-            // if(document.getElementById('date-start').validity.valid && document.getElementById('date-end').validity.valid){
-
-            // }
-
-
-
-
-            function processGantt(files){
+            function processGantt(textCSV){
                 document.getElementById('gantt').innerHTML = '';
 
-                Papa.parse(files[0], {
+                Papa.parse(textCSV, {
                     skipEmptyLines: true,
                     complete: function(results) {
                         // munge and report data once it has arrived
@@ -221,29 +199,6 @@
 
                 return parsed;
             }
-
-            // // redirects & data fetching
-            // function redirectDaterange(){
-            //     // redirect to the query string with the specified dates
-
-            //     if(!document.getElementById('date-start').validity.valid || !document.getElementById('date-end').validity.valid)
-            //         return;
-
-            //     var start = document.getElementById('date-start').value,
-            //         end   = document.getElementById('date-end').value;
-
-            //     window.location = `?start=${start}&end=${end}`;
-
-            // }
-
-            // function getParameterByName(name) {
-            //     // get a parameter out of the query string
-            //     // thanks http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript/901144#901144
-            //     name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
-            //     var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
-            //         results = regex.exec(location.search);
-            //     return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
-            // }
 
             dataStore = {
                 'months': ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
