@@ -62,11 +62,22 @@
                 //this is *quite* the hack - better solution is to get mis to put proper cors headers on their post...
                 url = `https://mis.triumf.ca/schedule/schedule.csv?detail=true&dateview=range&from=${start}&to=${end}&weeks_later=100&in=isac_wing`
                 console.log(url)
-                $.getJSON('http://alloworigin.com/get?url=' + encodeURIComponent(url) + '&callback=?', 
-                    function(data){
+                $.ajax({
+                    dataType: 'json',
+                    url: 'http://alloworigin.com/get?url=' + encodeURIComponent(url) + '&callback=?', 
+                    success: function(data){
                         processGantt(data.contents);
+                    },
+                    error: function(err){
+                        //sometimes alloworigin freaks out; kludge upon kludge:
+                        window.setTimeout(reload, 1000);
                     }
-                );
+
+                });
+            }
+
+            function reload(){
+                location.reload();
             }
 
             function processGantt(textCSV){
