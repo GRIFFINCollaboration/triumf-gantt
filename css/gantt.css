@@ -150,3 +150,7 @@ div.wrap{
     flex-grow: 1;
     flex-shrink 0;
 }
+
+div.ui-row{
+    margin-bottom: 1em;
+}
