@@ -3,6 +3,7 @@
         <title>TRIUMF Gantt Chart</title>
         <script type="text/javascript" src="scripts/papaparse.min.js"></script>
         <script src="scripts/jquery1-11-3.min.js" type="text/javascript"></script>
+        <script src="scripts/html2canvas.min.js" type="text/javascript"></script>
 
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
         <script src="scripts/bootstrap3-3-5.min.js" type="text/javascript"></script>
@@ -21,6 +22,8 @@
                 <label>to</label>
                 <input id='date-end' type=text placeholder='yyyy-mm-dd' pattern='[0-9]{4,4}-[0-9]{2,2}-[0-9]{2,2}'></input>
                 <a class='btn btn-info' onclick='redirectDaterange()'>Find Schedule</a>
+
+                <a id='imageDL' class='btn btn-success disabled' download='gantt.png'>Preparing Download...</a>
             </div>
 
             <table id='gantt' class='table text-center'></table>
@@ -141,8 +144,19 @@
                                 row.appendChild(cell);
                             }
                         }
+                        // prepare to save the canvas
+                        html2canvas(document.getElementById('gantt')).then(function(canvas) {
+                            var dl = document.getElementById('imageDL')
+
+                            dl.href = canvas.toDataURL();
+                            dl.classList.remove('disabled');
+                            dl.innerHTML = 'Download Chart';
+                        });
                     }
                 });
+
+
+
             }
 
             // table munging
