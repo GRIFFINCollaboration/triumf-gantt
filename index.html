@@ -21,7 +21,14 @@
                 <input id='date-start' type=text placeholder='yyyy-mm-dd' pattern='[0-9]{4,4}-[0-9]{2,2}-[0-9]{2,2}'></input>
                 <label>to</label>
                 <input id='date-end' type=text placeholder='yyyy-mm-dd' pattern='[0-9]{4,4}-[0-9]{2,2}-[0-9]{2,2}'></input>
-                <a class='btn btn-info' onclick='redirectDaterange()'>Find Schedule</a>
+                <a class='btn btn-info' onclick='redirectDaterange()'>Find Schedule by Date</a>
+
+                <label>Schedule Number:</label>
+                <input id='schedule-number' type=number placeholder=130 pattern='[0-9]*'></input>
+                <a class='btn btn-info' onclick='redirectSchedule()'>Find Schedule By Number</a>
+
+                <label>Revision Filter (optional):</label>
+                <input id='revision-tag' type=text placeholder='ACTIVE'></input>
 
                 <a id='imageDL' class='btn btn-success disabled' download='gantt.png'>Preparing Download...</a>
             </div>
@@ -41,12 +48,18 @@
 
             var start = getParameterByName('start'),
                 end   = getParameterByName('end'),
+                scheduleNumber = getParameterByName('schedule'),
+                revision = getParameterByName('revision'),
                 date = new Date(),
-                url;
+                url,
+                pickedByDate = (typeof(start)=='string' && start.length>0) && (typeof(end)=='string' && end.length>0),
+                pickedBySchedule = typeof(scheduleNumber)=='string' && scheduleNumber.length>0;
 
             // load url parameters into ui
             document.getElementById('date-start').value = start;
             document.getElementById('date-end').value = end;
+            document.getElementById('schedule-number').value = scheduleNumber;
+            document.getElementById('revision-tag').value = revision;
 
             // make sure something sensible found its way into the ui, otherwise set to defaults
             if(!start || !document.getElementById('date-start').validity.valid){
@@ -59,25 +72,35 @@
                 end = '2063-04-05';
                 document.getElementById('date-end').value = end;
             }
-
-            // fetch calendar described by query string if valid
-            if(document.getElementById('date-start').validity.valid && document.getElementById('date-end').validity.valid){
-                //this is *quite* the hack - better solution is to get mis to put proper cors headers on their post...
-                url = `https://mis.triumf.ca/schedule/schedule.csv?detail=true&dateview=range&from=${start}&to=${end}&weeks_later=100&in=isac_wing`
-                console.log(url)
-                $.ajax({
-                    dataType: 'json',
-                    url: 'http://alloworigin.com/get?url=' + encodeURIComponent(url) + '&callback=?', 
-                    success: function(data){
-                        processGantt(data.contents);
-                    },
-                    error: function(err){
-                        //sometimes alloworigin freaks out; kludge upon kludge:
-                        window.setTimeout(reload, 1000);
-                    }
-
-                });
+            if(!document.getElementById('schedule-number').validity.valid){
+                scheduleNumber = 111
+                document.getElementById('schedule-number').value = scheduleNumber;
             }
+
+            // fetch calendar described by date range if query string date range was valid, or by default dates if there are no other options
+            if(pickedByDate || (!pickedByDate && !pickedBySchedule)){
+                url = `https://mis.triumf.ca/schedule/schedule.csv?detail=true&dateview=range&from=${start}&to=${end}&weeks_later=100&in=isac_wing`
+            } else if(pickedBySchedule){
+                url = `https://mis.triumf.ca/schedule/schedule.csv?detail=true&dateview=range&from=1976-02-09&to=2063-04-05&schedule=${scheduleNumber}&weeks_later=100&in=isac_wing`
+            }
+            if(typeof(revision)=='string' && revision.length > 0)
+                url += `&revision=${revision}`;
+
+            console.log(url)
+            $.ajax({
+                dataType: 'json',
+                //this is *quite* the hack - better solution is to get mis to put proper cors headers on their post...
+                url: 'http://alloworigin.com/get?url=' + encodeURIComponent(url) + '&callback=?', 
+                success: function(data){
+                    processGantt(data.contents);
+                },
+                error: function(err){
+                    //sometimes alloworigin freaks out; kludge upon kludge:
+                    window.setTimeout(reload, 1000);
+                }
+
+            });
+            
 
             function reload(){
                 location.reload();
@@ -266,9 +289,31 @@
                     return;
 
                 var start = document.getElementById('date-start').value,
-                    end   = document.getElementById('date-end').value;
+                    end   = document.getElementById('date-end').value,
+                    revision = document.getElementById('revision-tag').value,
+                    query = `?start=${start}&end=${end}`
 
-                window.location = `?start=${start}&end=${end}`;
+                if(typeof(revision)=='string' && revision.length>0)
+                    query += `&revision=${revision}`;
+
+                window.location = query;
+
+            }
+
+            function redirectSchedule(){
+                // redirect to the query string with the specified schedule number
+
+                if(!document.getElementById('schedule-number').validity.valid)
+                    return;
+
+                var schedule = document.getElementById('schedule-number').value,
+                    revision = document.getElementById('revision-tag').value,
+                    query = `?schedule=${schedule}`
+
+                if(typeof(revision)=='string' && revision.length>0)
+                    query += `&revision=${revision}`;
+
+                window.location = query;
 
             }
 
