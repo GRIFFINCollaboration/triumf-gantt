@@ -27,7 +27,7 @@
                 <a class='btn btn-info' onclick='redirectDaterange()'>Find Schedule by Date</a>
 
                 <label>Schedule Number:</label>
-                <input id='schedule-number' type=number placeholder=130 pattern='[0-9]*'></input>
+                <input id='schedule-number' type=number value='130' pattern='[0-9]*'></input>
                 <a class='btn btn-info' onclick='redirectSchedule()'>Find Schedule By Number</a>
 
                 <label>Revision Filter (optional):</label>
@@ -61,7 +61,8 @@
             // load url parameters into ui
             document.getElementById('date-start').value = start;
             document.getElementById('date-end').value = end;
-            document.getElementById('schedule-number').value = scheduleNumber;
+            if(scheduleNumber)
+                document.getElementById('schedule-number').value = scheduleNumber;
             document.getElementById('revision-tag').value = revision;
 
             // make sure something sensible found its way into the ui, otherwise set to defaults
